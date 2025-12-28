@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DARcFibres AI</title>
+
+<style>
+#logoutCard {
+  display: none; /* hidden initially, only show when logged in */
+}
+#greeting.hide{
+  opacity:0;
+}
+#greeting{
+  position:fixed;              
+  top:45%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  text-align:center;
+  font-size:1.1rem;
+  opacity:.75;
+  pointer-events:none;
+  transition:opacity .25s ease;
+  z-index:55;                  
+}
+.drawer-header{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.drawer-back{
+  font-size:.85rem;
+  opacity:.75;
+  cursor:pointer;
+}
+
+.drawer-back:hover{
+  opacity:1;
+}
+:root{
+  --accent:#00ffff;
+  --bg:#0b0b0f;
+  --card:rgba(0,0,0,0.55);
+  --user-msg:#2e2e34;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
+html,body{height:100%;background:var(--bg);color:#fff;overflow:hidden}
+
+#bgCanvas{position:fixed;inset:0;z-index:-1}
+
+/* HEADER */
+header{
+  position:fixed;top:8px;left:0;right:0;
+  display:flex;justify-content:center;z-index:30
+}
+.header-card{
+  width:92%;max-width:900px;
+  background:var(--card);
+  border-radius:16px;
+  padding:8px 12px;
+  display:flex;align-items:center;justify-content:space-between
+}
+.header-left{
+  display:flex;align-items:center;gap:10px
+}
+.back-btn{
+  font-size:18px;
+  cursor:pointer;
+  opacity:.85
+}
+.logo{
+  width:18px;height:18px;
+  border-radius:50%;
+  background:var(--accent)
+}
+.title{
+  font-weight:600;
+  line-height:1.1
+}
+.subtitle{
+  font-size:.65rem;
+  opacity:.55
+}
+.settings-btn{
+  font-size:22px;
+  cursor:pointer
+}
+/* DRAWER HANDLE */
+#drawerHandle{
+  position:fixed;
+  top:50%;
+  right:0;
+  transform:translateY(-50%);
+  width:22px;
+  height:60px;
+  background:rgba(0,0,0,0.45);
+  border-radius:10px 0 0 10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+  cursor:pointer;
+  z-index:35;
+  user-select:none;
+  transition:.25s ease;
+}
+
+#drawerHandle:hover{
+  background:rgba(0,0,0,0.65);
+}
+/* PANELS */
+.panel{
+  position:fixed;top:0;height:100%;width:280px;
+  background:var(--card);
+  z-index:40;transition:.3s ease
+}
+#settings{left:0;transform:translateX(-100%)}
+#settings.open{transform:translateX(0)}
+#history{
+  position: fixed;
+  top: 64px;              /* below header */
+  left: 0;
+  width: 78%;
+  height: calc(100vh - 64px);
+
+  background: #121212;    /* lighter black (explained below) */
+  border-radius: 20px;
+
+  transform: translateX(-100%);
+  transition: transform .3s ease;
+
+  box-shadow: 0 12px 40px rgba(0,0,0,.7);
+  z-index: 20;
+}
+#history.open{transform:translateX(0)}
+
+.panel-title{
+  padding:14px;
+  font-weight:600;
+  text-align:center;
+  border-bottom:1px solid #222
+}
+.panel-item{
+  padding:12px;margin:10px;
+  background:#1a1a1f;
+  border-radius:12px;
+  cursor:pointer;
+  font-size:.85em
+}
+
+/* CHAT */
+#chat{
+  padding:90px 16px 80px;
+  height:100%;
+  overflow-y:auto
+}
+.msg{
+  max-width:75%;
+  padding:10px 14px;
+  border-radius:14px;
+  margin-bottom:10px;
+  font-size:.9em
+}
+.user{margin-left:auto;background:var(--user-msg)}
+.ai{background:#19191f;color:var(--accent)}
+
+/* INPUT — FULL TRANSPARENT */
+.input-bar{
+  position:fixed;
+  bottom:0;
+  width:100%;
+  padding:10px;
+  background:transparent;
+}
+.input-wrap{
+  max-width:900px;
+  margin:auto;
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+input{
+  flex:1;
+  border:none;
+  border-radius:26px;
+  padding:14px 16px;
+  font-size:1rem;
+  outline:none;
+}
+
+button{
+  border:none;
+  border-radius:26px;
+  padding:0 22px;
+  font-size:1rem;
+  background:var(--accent);
+  cursor:pointer;
+  height:48px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+/* ===== FULLSCREEN SETTINGS UI ===== */
+#settings{
+  position:fixed;
+  inset:0;
+  background:rgba(8,10,14,0.92);
+  backdrop-filter:blur(18px);
+  z-index:60;
+  display:flex;
+  flex-direction:column;
+  transform:translateY(100%);
+  transition:.35s ease;
+}
+
+#settings.open{
+  transform:translateY(0);
+}
+
+.settings-header{
+  padding:18px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.settings-header h2{
+  font-size:1.1rem;
+  font-weight:600;
+}
+
+.settings-close{
+  font-size:1.4rem;
+  cursor:pointer;
+  opacity:.7;
+}
+
+.settings-close:hover{
+  opacity:1;
+}
+
+.settings-body{
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.setting-card{
+  background:rgba(255,255,255,0.06);
+  border-radius:16px;
+  padding:16px;
+}
+
+.setting-title{
+  font-size:.9rem;
+  opacity:.85;
+  margin-bottom:8px;
+}
+@keyframes thinkingPulse {
+  0% { opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { opacity: 0.3; }
+}
+
+.msg.thinking {
+  animation: thinkingPulse 1.2s ease-in-out infinite;
+}
+#intro{
+  position:fixed;
+  inset:0;
+  background:#0b0b0f;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:100;
+  transition:opacity .6s ease;
+}
+
+#intro.hide{
+  opacity:0;
+  pointer-events:none;
+}
+
+#introText{
+  font-size:1.8rem;
+  font-weight:600;
+  letter-spacing:.04em;
+  opacity:0;
+  transition:opacity .6s ease;
+}
+
+#introText .core{
+  color:orange;
+}
+#notice{
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  width:90%;
+  max-width:420px;
+  background:rgba(20,20,25,0.95);
+  border-radius:16px;
+  padding:16px 18px;
+  box-shadow:0 20px 50px rgba(0,0,0,.6);
+  z-index:70;
+  opacity:0;
+  pointer-events:none;
+  transition:.4s ease;
+}
+
+#notice.show{
+  opacity:1;
+  pointer-events:auto;
+}
+
+#notice strong{
+  font-size:.95rem;
+}
+
+#notice p{
+  font-size:.8rem;
+  opacity:.8;
+  margin-top:6px;
+}
+
+#notice .close{
+  position:absolute;
+  top:10px;
+  right:12px;
+  cursor:pointer;
+  opacity:.6;
+}
+
+#notice .close:hover{
+  opacity:1;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.login-card {
+  background: #00ffff;
+  color: #000;
+  padding: 4px 10px;   /* smaller padding */
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85rem;  /* smaller text */
+  white-space: nowrap;
+}
+
+.login-card:hover {
+  opacity: 0.85;
+}
+</style>
+</head>
+<div id="intro">
+  <div id="introText"></div>
+</div>
+<body>
+  <!-- DRAWER HANDLE -->
+<div id="drawerHandle" onclick="toggleHistory()">⋮</div>
+
+<canvas id="bgCanvas"></canvas>
+
+<header>
+  <div class="header-card">
+    <div class="header-left">
+      <div class="logo"></div>
+      <div>
+        <div class="title">DARcFibres</div>
+        <div class="subtitle">T-ARXS project</div>
+      </div>
+    </div>
+    <div class="header-right">
+    <div id="loginBtn" class="login-card">Login</div>
+    <div class="settings-btn" onclick="toggleSettings()">•</div>
+  </div>
+</header>
+
+</div>
+
+<!-- CHAT DRAWER -->
+<div id="history" class="panel">
+  <div class="panel-title drawer-header">
+   <span class="drawer-back" onclick="toggleHistory()"><</span>
+    <span>Chats</span>
+  </div>
+
+  <div class="panel-item" onclick="newChat()">＋ New Chat</div>
+  <div id="chatList"></div>
+</div>
+
+<div id="chat"></div>
+
+<div class="input-bar">
+  <div class="input-wrap">
+    <input id="input" placeholder="Message DARcFibres…" 
+oninput="this.value.trim() && hideGreeting()">
+    <button onclick="send()">➤</button>
+  </div>
+</div>
+
+<div id="greeting"></div>
+<script>
+/* STATE */
+let chats = [], current = 0;
+let thinking = false;
+let thinkPhase = 0;
+
+function newChat(){
+  chats.push([])
+  current = chats.length - 1
+  renderChat()
+  renderChatList()
+}
+
+function renderChat(){
+  chat.innerHTML = '';
+
+  if (chats[current].length === 0 && input.value.trim() === '') {
+    showGreeting();
+  } else {
+    hideGreeting();
+  }
+
+  chats[current].forEach(m => addMsg(m.text, m.role));
+}
+function renderChatList(){
+  chatList.innerHTML=''
+  chats.forEach((c,i)=>{
+    const d=document.createElement('div')
+    d.className='panel-item'
+    d.textContent='Chat '+(i+1)
+    d.onclick=()=>{
+      current=i
+      renderChat()
+      toggleHistory()
+    }
+    chatList.appendChild(d)
+  })
+}
+
+/* MSG */
+function addMsg(t,c){
+  const d=document.createElement('div')
+  d.className='msg '+c
+  d.textContent=t
+  chat.appendChild(d)
+  chat.scrollTop=chat.scrollHeight
+  return d
+}
+
+/* PANELS */
+function toggleSettings(){
+  const settings = document.getElementById('settings')
+  const drawer = document.getElementById('history')
+  settings.classList.toggle('open')
+  drawer.classList.remove('open')
+}
+
+function toggleHistory(){
+  const drawer = document.getElementById('history')
+  const settings = document.getElementById('settings')
+  drawer.classList.toggle('open')
+  settings.classList.remove('open')
+}
+
+/* BACK */
+function goBack(){
+  history.back()
+}
+
+/* GESTURE BACK */
+let sx=0
+addEventListener('touchstart',e=>sx=e.touches[0].clientX)
+addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-sx
+  if(sx<30 && dx>80){
+    history.back()
+  }
+  if(dx<-80){
+    toggleHistory()
+  }
+})
+
+/* BG */
+const c=bgCanvas,ctx=c.getContext('2d')
+function resize(){c.width=innerWidth;c.height=innerHeight}
+addEventListener('resize',resize);resize()
+let h=0
+function drawThinking() {
+  if (!thinking) return;
+
+  ctx.save();
+  ctx.globalAlpha = 0.25;
+
+  const cx = c.width / 2;
+  const cy = c.height / 2;
+
+  ctx.strokeStyle = `hsl(${(thinkPhase * 50) % 360}, 90%, 60%)`;
+  ctx.lineWidth = 3;
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, 70, thinkPhase, thinkPhase + Math.PI * 1.4);
+  ctx.stroke();
+
+  ctx.restore();
+
+  thinkPhase += 0.06;
+}
+;(function bg(){
+  const g=ctx.createLinearGradient(0,0,c.width,c.height)
+  g.addColorStop(0,`hsl(${h},80%,18%)`)
+  g.addColorStop(1,`hsl(${h+60},80%,22%)`)
+  ctx.fillStyle=g
+  ctx.fillRect(0,0,c.width,c.height)
+  h=(h+.15)%360
+  drawThinking();
+  requestAnimationFrame(bg)
+})()
+
+const greetings = [
+  "Hello 👋 How can I help?",
+  "Start a conversation",
+  "Ask me anything",
+  "Ready when you are",
+  "Let’s build something cool 🚀"
+];
+
+function showGreeting(){
+  const g = document.getElementById('greeting');
+  g.textContent = greetings[Math.floor(Math.random()*greetings.length)];
+  g.classList.remove('hide');
+}
+
+function hideGreeting(){
+  document.getElementById('greeting').classList.add('hide');
+}
+newChat();
+const intro = document.getElementById('intro');
+const introText = document.getElementById('introText');
+
+function playIntro(){
+  // Step 1: DARcFibres
+  introText.textContent = 'DARcFibres';
+  introText.style.opacity = 1;
+
+  setTimeout(()=>{
+    introText.style.opacity = 0;
+  }, 1200);
+
+  // Step 2: QntraCORe
+  setTimeout(()=>{
+    introText.innerHTML = 'Qntra<span class="core">CORe</span>';
+    introText.style.opacity = 1;
+  }, 2000);
+
+  setTimeout(()=>{
+    introText.style.opacity = 0;
+  }, 3200);
+
+  // Step 3: Remove intro & show popup
+  setTimeout(()=>{
+    intro.classList.add('hide');
+    showNotice();
+  }, 4000);
+}
+
+playIntro();
+function showNotice(){
+  document.getElementById('notice').classList.add('show');
+}
+
+function closeNotice(){
+  document.getElementById('notice').classList.remove('show');
+}
+
+</script>
+<div id="settings">
+  <div class="settings-header">
+    <h2>Settings</h2>
+    <span class="settings-close" onclick="toggleSettings()">✕</span>
+  </div>
+
+  <div class="settings-body">
+    <!-- Other settings -->
+    <div class="setting-card" id="logoutCard" onclick="googleLogout()">
+      <div class="setting-title">Logout ✔️</div>
+    </div>
+  </div>
+</div>
+
+    <div class="setting-card">
+      <div class="setting-title">Chat Drawer Opacity</div>
+      <input type="range" min="0.15" max="0.85" step="0.05">
+    </div>
+
+  </div>
+</div>
+<div id="notice">
+  <span class="close" onclick="closeNotice()">✕</span>
+  <strong>DARcFibres is now available</strong>
+  <p>
+    This project is currently under development.  
+    It may contain mistakes and unstable behavior, and responses may not always work properly.
+  </p>
+</div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import {
+    getAuth,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
+    signOut,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+
+  import {
+    getFirestore,
+    doc,
+    setDoc,
+    getDoc,
+    collection,
+    addDoc,
+    query,
+    orderBy,
+    getDocs,
+    serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+  // ---------- CONFIG ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyBoLIXZ5NxPByTxwH7u5dSXM-TsfyyzHE4",
+    authDomain: "darcfibres-ai.firebaseapp.com",
+    projectId: "darcfibres-ai",
+    storageBucket: "darcfibres-ai.firebasestorage.app",
+    messagingSenderId: "982617921644",
+    appId: "1:982617921644:web:6ab517c44a69b2825ee049"
+  };
+
+  // ---------- INIT ----------
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const provider = new GoogleAuthProvider();
+
+  // DOM refs
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutCard = document.getElementById("logoutCard");
+  const chatEl = document.getElementById("chat");
+  const inputEl = document.getElementById("input");
+
+  let currentUser = null;
+  let chats = [];
+  let current = 0;
+
+  // ---------- AUTH (popup on desktop, redirect on mobile) ----------
+  loginBtn.onclick = async () => {
+    try {
+      // on phones redirect sometimes works better
+      if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        await signInWithRedirect(auth, provider);
+      } else {
+        await signInWithPopup(auth, provider);
+      }
+    } catch (err) {
+      console.error("Login failed:", err);
+      alert("Login failed: " + (err.message || err));
+    }
+  };
+
+  // handle redirect result (if used)
+  getRedirectResult(auth).catch(err => {
+    console.warn("getRedirectResult error:", err);
+  });
+
+  logoutCard.onclick = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+    toggleSettings?.(); // close settings if function exists
+  };
+
+  // ---------- AUTH STATE ----------
+  onAuthStateChanged(auth, async user => {
+    if (user) {
+      currentUser = user;
+      console.log("Logged in:", user.email);
+      loginBtn.style.display = "none";
+      if (logoutCard) logoutCard.style.display = "flex";
+
+      // create user doc if not exists
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const snap = await getDoc(userRef);
+        if (!snap.exists()) {
+          await setDoc(userRef, {
+            name: user.displayName || null,
+            email: user.email || null,
+            createdAt: serverTimestamp()
+          });
+        }
+      } catch (err) {
+        console.error("Error creating user doc:", err);
+      }
+
+      await loadChatsForUser();
+    } else {
+      currentUser = null;
+      loginBtn.style.display = "flex";
+      if (logoutCard) logoutCard.style.display = "none";
+      chatEl.innerHTML = "";
+      chats = []; current = 0;
+    }
+  });
+
+  // ---------- Firestore helpers ----------
+  async function saveMessage(role, text) {
+    if (!currentUser) return;
+    try {
+      await addDoc(collection(db, "users", currentUser.uid, "messages"), {
+        role,
+        text,
+        time: serverTimestamp()
+      });
+    } catch (err) {
+      console.error("Failed to save message:", err);
+    }
+  }
+
+  async function loadChatsForUser() {
+    try {
+      chatEl.innerHTML = "";
+      const q = query(
+        collection(db, "users", currentUser.uid, "messages"),
+        orderBy("time")
+      );
+      const snap = await getDocs(q);
+      snap.forEach(d => {
+        const m = d.data();
+        addMsg(m.text, m.role);
+      });
+    } catch (err) {
+      console.error("loadChatsForUser error:", err);
+    }
+  }
+
+  // ---------- send() — EXPOSED AS window.send ----------
+  async function send() {
+    // defensive checks
+    if (!inputEl) { console.error("input element missing"); return; }
+    const msg = inputEl.value?.trim();
+    if (!msg) return;
+    inputEl.value = '';
+    // local chat storage
+    if (!chats[current]) chats[current] = [];
+    chats[current].push({ role: 'user', text: msg });
+    addMsg(msg, 'user');
+
+    // save to firestore if logged in
+    if (currentUser) await saveMessage("user", msg);
+
+    // show thinking placeholder
+    const aiNode = addMsg('Thinking…', 'ai');
+    aiNode.classList.add('thinking');
+
+    try {
+      const res = await fetch('https://darcfibres-gzwg.onrender.com/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg })
+      });
+
+      if (!res.ok) {
+        // server returned non-200
+        throw new Error("Server response not OK: " + res.status);
+      }
+
+      let reply = '';
+try {
+  const data = await res.json();
+  reply = data?.reply ?? data?.message ?? data?.text ?? '';
+} catch(e) {
+  console.warn("Backend did not return JSON:", e);
+  reply = await res.text(); // fallback to raw text
+}
+
+aiNode.classList.remove('thinking');
+aiNode.textContent = reply || 'No response';
+      chats[current].push({ role: 'ai', text: aiNode.textContent });
+      if (currentUser) await saveMessage("ai", aiNode.textContent);
+    } catch (err) {
+      aiNode.classList.remove('thinking');
+      aiNode.textContent = 'Backend offline';
+      console.error("Send() error:", err);
+      // optional: show an alert for immediate debugging
+      // alert("Send failed — check console");
+    }
+  }
+
+  // make send globally callable by inline onclick
+  window.send = send;
+
+  // expose logout for your settings button
+  window.googleLogout = async function() {
+    try {
+      await signOut(auth);
+      console.log("Logged out");
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
+    toggleSettings?.();
+  };
+
+  // ---------- UI helpers ----------
+  function addMsg(t, c) {
+    const d = document.createElement('div');
+    d.className = 'msg ' + c;
+    d.textContent = t;
+    chatEl.appendChild(d);
+    chatEl.scrollTop = chatEl.scrollHeight;
+    return d;
+  }
+
+  // if your header send button uses inline onclick, keeping window.send is fine.
+  // optionally attach the enter key to send:
+  inputEl?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') send();
+  });
+
+  // debug aid: allow manual test of backend without login
+  window.debugTestBackend = async function() {
+    try {
+      const r = await fetch('https://darcfibres-gzwg.onrender.com/api', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ message: "hello (test)" })
+      });
+      const j = await r.json();
+      console.log("backend test →", j);
+      alert("Check console for backend test response");
+    } catch (err) {
+      console.error("Backend test failed:", err);
+      alert("Backend test failed. Check console.");
+    }
+  };
+
+  console.log("Firebase module loaded — window.send is available");
+</script>
+</body>
+</html>
